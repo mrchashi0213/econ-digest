@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """世界の主要経済ニュース・ダイジェスト
 
-前日 00:00 から当日 05:00（既定はJST）までに公開されたニュースを
+前日 00:00 から当日 05:00（既定はJST、月曜日は先週金曜 00:00 から）までに公開されたニュースを
 RSS/Atom フィードから集め、Claude で重要度を判断して日本語のレポートにまとめる。
 
 使い方:
@@ -50,11 +50,40 @@ class Article:
 
 # ---------------------------------------------------------------- 期間計算
 
-def compute_window(target: date, tz: ZoneInfo, start_hour: int = 0, end_hour: int = 5):
-    """前日 start_hour 時 〜 当日 end_hour 時 の [start, end) を返す。"""
-    start = datetime.combine(target - timedelta(days=1), time(start_hour), tzinfo=tz)
+def compute_window(target: date, tz: ZoneInfo, start_hour: int = 0, end_hour: int = 5,
+                   days_back: int | None = None):
+    """[start, end) を返す。
+
+    通常は「前日 start_hour 時 〜 当日 end_hour 時」。
+    月曜日は週末をまとめて「先週金曜 start_hour 時 〜 月曜 end_hour 時」にする。
+    days_back を指定するとその日数だけさかのぼる。
+    """
+    if days_back is None:
+        days_back = 3 if target.weekday() == 0 else 1  # 0 = 月曜日
+    start = datetime.combine(target - timedelta(days=days_back), time(start_hour), tzinfo=tz)
     end = datetime.combine(target, time(end_hour), tzinfo=tz)
     return start, end
+
+
+_WHEN_RE = re.compile(r"when(:|%3A)\d+d")
+
+
+def expand_feed(feed: dict, start: datetime, end: datetime) -> list[dict]:
+    """Google News 検索は1回で最大100件しか返らないため、期間が1日半を超えるとき
+    （月曜日など）は `when:Nd` を1日ごとの `after:/before:` 検索に分割する。"""
+    m = _WHEN_RE.search(feed["url"])
+    if not m or end - start <= timedelta(days=1, hours=12):
+        return [feed]
+    sep = m.group(1)
+    first = start.astimezone(timezone.utc).date()
+    last = end.astimezone(timezone.utc).date()
+    out, d = [], first
+    while d <= last:
+        nxt = d + timedelta(days=1)
+        url = feed["url"].replace(m.group(0), f"after{sep}{d}+before{sep}{nxt}")
+        out.append(feed | {"url": url, "label": f"{feed['name']} ({d:%m/%d})"})
+        d = nxt
+    return out
 
 
 # ---------------------------------------------------------------- 収集
@@ -74,14 +103,14 @@ def _entry_time(entry) -> datetime | None:
     return None
 
 
-def fetch_feed(feed: dict) -> tuple[str, list[Article], str | None]:
+def fetch_feed(feed: dict) -> tuple[dict, list[Article], str | None]:
     name = feed["name"]
     try:
         parsed = feedparser.parse(feed["url"], agent=USER_AGENT)
     except Exception as e:  # ネットワーク例外など
-        return name, [], str(e)
+        return feed, [], str(e)
     if parsed.get("bozo") and not parsed.entries:
-        return name, [], str(parsed.get("bozo_exception", "parse error"))
+        return feed, [], str(parsed.get("bozo_exception", "parse error"))
     # feeds.toml の任意設定: require（タイトルが一致必須の正規表現）/ exclude（一致したら除外）
     require = re.compile(feed["require"]) if feed.get("require") else None
     exclude = re.compile(feed["exclude"]) if feed.get("exclude") else None
@@ -101,19 +130,21 @@ def fetch_feed(feed: dict) -> tuple[str, list[Article], str | None]:
             link=e.get("link", ""),
             published=ts,
         ))
-    return name, out, None
+    return feed, out, None
 
 
 def collect(feeds: list[dict], start: datetime, end: datetime, verbose=True) -> list[Article]:
     articles: dict[str, Article] = {}
+    jobs = [f for feed in feeds for f in expand_feed(feed, start, end)]
     with ThreadPoolExecutor(max_workers=8) as pool:
-        for name, items, err in pool.map(fetch_feed, feeds):
+        for feed, items, err in pool.map(fetch_feed, jobs):
+            name = feed.get("label", feed["name"])
             if err:
                 print(f"  [warn] {name}: {err}", file=sys.stderr)
             hits = [a for a in items if start <= a.published < end]
             if verbose:
                 print(f"  {name}: {len(items)}件取得 / 期間内 {len(hits)}件", file=sys.stderr)
-            if items:
+            if items and "label" not in feed:  # 日ごとに分割した検索では鮮度チェックをしない
                 newest = max(a.published for a in items)
                 oldest = min(a.published for a in items)
                 if newest < end - timedelta(days=3):
@@ -221,6 +252,8 @@ def main(argv=None) -> int:
     p.add_argument("--date", type=date.fromisoformat, help="当日の日付 (YYYY-MM-DD)。既定は今日")
     p.add_argument("--tz", default="Asia/Tokyo", help="基準タイムゾーン (既定: Asia/Tokyo)")
     p.add_argument("--end-hour", type=int, default=5, help="当日の終了時刻 (既定: 5)")
+    p.add_argument("--days-back", type=int, default=None,
+                   help="何日前の0時からにするか (既定: 月曜は3=先週金曜、それ以外は1=前日)")
     p.add_argument("--feeds", type=Path, default=BASE_DIR / "feeds.toml")
     p.add_argument("--out-dir", type=Path, default=BASE_DIR / "reports")
     p.add_argument("--web-search", action="store_true", help="Claude の Web 検索で補完")
@@ -230,7 +263,7 @@ def main(argv=None) -> int:
 
     tz = ZoneInfo(args.tz)
     target = args.date or datetime.now(tz).date()
-    start, end = compute_window(target, tz, end_hour=args.end_hour)
+    start, end = compute_window(target, tz, end_hour=args.end_hour, days_back=args.days_back)
     print(f"対象期間: {start.isoformat()} 〜 {end.isoformat()}", file=sys.stderr)
 
     feeds = tomllib.loads(args.feeds.read_text(encoding="utf-8"))["feeds"]
