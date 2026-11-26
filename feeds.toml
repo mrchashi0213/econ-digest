@@ -43,6 +43,7 @@ region = "世界"
 name = "Google News: 経済"
 url = "https://news.google.com/rss/search?q=%E7%B5%8C%E6%B8%88+OR+%E6%97%A5%E9%8A%80+OR+%E6%A0%AA%E4%BE%A1+when:2d&hl=ja&gl=JP&ceid=JP:ja"
 region = "日本"
+exclude = "株価・株式情報|株価チャート"
 
 # 日経・ロイター日本語版は公式RSSがないため、Google News のサイト指定検索で取得
 # require: タイトルに含まれるべき正規表現 / exclude: 除外する正規表現（ロイターの株価ページ等を除く）
