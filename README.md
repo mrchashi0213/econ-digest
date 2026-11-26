@@ -41,3 +41,6 @@ Claude の定期実行タスクが平日の毎朝 5:05（日本時間）にこ�
 祝日・年末年始（12/31〜1/3）の朝は `--skip-holiday` により何もせず終了します。
 
 フィードを変えるなら `feeds.toml`、手順を変えるなら `DAILY_TASK.md` を編集してください。翌朝から反映されます。
+
+## Claude 向けスキル
+運用・改修の手順とこれまでの経緯は [`.claude/skills/econ-digest/SKILL.md`](.claude/skills/econ-digest/SKILL.md) にまとめてあります。このリポジトリを開いた Claude Code のセッションで自動的に読み込まれます。
