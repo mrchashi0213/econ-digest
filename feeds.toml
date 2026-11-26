@@ -1,0 +1,72 @@
+# 収集対象のRSS/Atomフィード。自由に追加・削除してください。
+# region は要約時のヒント（任意）
+
+# NHK 経済 (https://www3.nhk.or.jp/rss/news/cat5.xml) は 2026-08 以降更新が止まっているため無効化
+# [[feeds]]
+# name = "NHK 経済"
+# url = "https://www3.nhk.or.jp/rss/news/cat5.xml"
+# region = "日本"
+
+[[feeds]]
+name = "BBC Business"
+url = "https://feeds.bbci.co.uk/news/business/rss.xml"
+region = "世界"
+
+# CNBC はクラウド環境からのアクセスを拒否(Access Denied)。自宅PCなどでは使える場合あり
+# [[feeds]]
+# name = "CNBC Economy"
+# url = "https://www.cnbc.com/id/20910258/device/rss/rss.html"
+# region = "米国"
+
+# CNBC はクラウド環境からのアクセスを拒否(Access Denied)。自宅PCなどでは使える場合あり
+# [[feeds]]
+# name = "CNBC World Markets"
+# url = "https://www.cnbc.com/id/100727362/device/rss/rss.html"
+# region = "世界"
+
+[[feeds]]
+name = "MarketWatch Top Stories"
+url = "https://feeds.content.dowjones.io/public/rss/mw_topstories"
+region = "米国"
+
+[[feeds]]
+name = "Al Jazeera Economy"
+url = "https://www.aljazeera.com/xml/rss/all.xml"
+region = "世界"
+
+[[feeds]]
+name = "Google News: economy"
+url = "https://news.google.com/rss/search?q=economy+OR+central+bank+OR+inflation+when:2d&hl=en-US&gl=US&ceid=US:en"
+region = "世界"
+
+[[feeds]]
+name = "Google News: 経済"
+url = "https://news.google.com/rss/search?q=%E7%B5%8C%E6%B8%88+OR+%E6%97%A5%E9%8A%80+OR+%E6%A0%AA%E4%BE%A1+when:2d&hl=ja&gl=JP&ceid=JP:ja"
+region = "日本"
+
+# 日経・ロイター日本語版は公式RSSがないため、Google News のサイト指定検索で取得
+# require: タイトルに含まれるべき正規表現 / exclude: 除外する正規表現（ロイターの株価ページ等を除く）
+
+[[feeds]]
+name = "日経: 経済・市場"
+url = "https://news.google.com/rss/search?q=site%3Anikkei.com+%E7%B5%8C%E6%B8%88+OR+%E9%87%91%E8%9E%8D+OR+%E6%A0%AA+OR+%E6%97%A5%E9%8A%80+OR+%E7%82%BA%E6%9B%BF+OR+%E9%87%91%E5%88%A9+when%3A2d&hl=ja&gl=JP&ceid=JP%3Aja"
+region = "日本"
+
+[[feeds]]
+name = "日経: 全般"
+url = "https://news.google.com/rss/search?q=site%3Anikkei.com+when%3A2d&hl=ja&gl=JP&ceid=JP%3Aja"
+region = "日本"
+
+[[feeds]]
+name = "ロイター日本語版: 経済・市場"
+url = "https://news.google.com/rss/search?q=site%3Areuters.com+%E7%B5%8C%E6%B8%88+OR+%E9%87%91%E8%9E%8D+OR+%E6%A0%AA+OR+%E6%97%A5%E9%8A%80+OR+%E7%82%BA%E6%9B%BF+OR+%E9%87%91%E5%88%A9+OR+%E4%B8%AD%E9%8A%80+when%3A2d&hl=ja&gl=JP&ceid=JP%3Aja"
+region = "日本"
+require = "[ぁ-んァ-ヶ一-龠]"
+exclude = "Stock Price|Latest News"
+
+[[feeds]]
+name = "ロイター日本語版: 全般"
+url = "https://news.google.com/rss/search?q=site%3Areuters.com+when%3A2d&hl=ja&gl=JP&ceid=JP%3Aja"
+region = "日本"
+require = "[ぁ-んァ-ヶ一-龠]"
+exclude = "Stock Price|Latest News"
