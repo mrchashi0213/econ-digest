@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """世界の主要経済ニュース・ダイジェスト
 
-前日 00:00 から当日 05:00（既定はJST、月曜日は先週金曜 00:00 から）までに公開されたニュースを
+前日 00:00 から当日 05:00（既定はJST。月曜日や祝日明けは直近の営業日 00:00 から）までに公開されたニュースを
 RSS/Atom フィードから集め、Claude で重要度を判断して日本語のレポートにまとめる。
 
 使い方:
@@ -28,6 +28,7 @@ from zoneinfo import ZoneInfo
 
 import anthropic
 import feedparser
+import jpholiday
 
 BASE_DIR = Path(__file__).resolve().parent
 MODEL = "claude-opus-5-5"
@@ -50,16 +51,29 @@ class Article:
 
 # ---------------------------------------------------------------- 期間計算
 
+def is_business_day(d: date) -> bool:
+    """日本の営業日か。土日・祝日（振替休日を含む）・年末年始（12/31〜1/3）は休み。"""
+    if d.weekday() >= 5:
+        return False
+    if (d.month, d.day) in {(12, 31), (1, 1), (1, 2), (1, 3)}:
+        return False
+    return not jpholiday.is_holiday(d)
+
+
 def compute_window(target: date, tz: ZoneInfo, start_hour: int = 0, end_hour: int = 5,
                    days_back: int | None = None):
     """[start, end) を返す。
 
-    通常は「前日 start_hour 時 〜 当日 end_hour 時」。
-    月曜日は週末をまとめて「先週金曜 start_hour 時 〜 月曜 end_hour 時」にする。
-    days_back を指定するとその日数だけさかのぼる。
+    開始は「target より前で直近の営業日」の start_hour 時、終了は target の end_hour 時。
+    - 平日の翌朝: 前日 00:00 〜 当日 05:00
+    - 月曜日: 先週金曜 00:00 〜 月曜 05:00
+    - 祝日明け（例: 月曜が祝日の火曜日）: 先週金曜 00:00 〜 火曜 05:00
+    days_back を指定すると、営業日に関係なくその日数だけさかのぼる。
     """
     if days_back is None:
-        days_back = 3 if target.weekday() == 0 else 1  # 0 = 月曜日
+        days_back = 1
+        while not is_business_day(target - timedelta(days=days_back)) and days_back < 14:
+            days_back += 1
     start = datetime.combine(target - timedelta(days=days_back), time(start_hour), tzinfo=tz)
     end = datetime.combine(target, time(end_hour), tzinfo=tz)
     return start, end
@@ -253,7 +267,7 @@ def main(argv=None) -> int:
     p.add_argument("--tz", default="Asia/Tokyo", help="基準タイムゾーン (既定: Asia/Tokyo)")
     p.add_argument("--end-hour", type=int, default=5, help="当日の終了時刻 (既定: 5)")
     p.add_argument("--days-back", type=int, default=None,
-                   help="何日前の0時からにするか (既定: 月曜は3=先週金曜、それ以外は1=前日)")
+                   help="何日前の0時からにするか (既定: 直近の営業日。平日は前日、月曜や祝日明けはさかのぼる)")
     p.add_argument("--feeds", type=Path, default=BASE_DIR / "feeds.toml")
     p.add_argument("--out-dir", type=Path, default=BASE_DIR / "reports")
     p.add_argument("--web-search", action="store_true", help="Claude の Web 検索で補完")
