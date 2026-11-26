@@ -32,10 +32,12 @@ CRON_TZ=Asia/Tokyo
 ```
 
 ## 毎朝の自動実行（Claude のクラウド）
-Claude の定期実行タスクが毎朝 5:05（日本時間）にこのリポジトリを取得し、[`DAILY_TASK.md`](DAILY_TASK.md) の手順で動きます。
+Claude の定期実行タスクが平日の毎朝 5:05（日本時間）にこのリポジトリを取得し、[`DAILY_TASK.md`](DAILY_TASK.md) の手順で動きます。
 
 - 記事を収集し（`--dry-run`、APIキー不要）、要約はそのセッションの Claude が行います
 - `reports/YYYY-MM-DD.md`（レポート）と `reports/YYYY-MM-DD_articles.json`（収集した記事）を main に push します
 - スライド（claude.ai のアーティファクト）をその日の内容で作り直します
+
+祝日・年末年始（12/31〜1/3）の朝は `--skip-holiday` により何もせず終了します。
 
 フィードを変えるなら `feeds.toml`、手順を変えるなら `DAILY_TASK.md` を編集してください。翌朝から反映されます。

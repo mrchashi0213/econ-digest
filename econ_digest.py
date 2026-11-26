@@ -273,10 +273,16 @@ def main(argv=None) -> int:
     p.add_argument("--web-search", action="store_true", help="Claude の Web 検索で補完")
     p.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh", "max"])
     p.add_argument("--dry-run", action="store_true", help="収集結果のみ保存し要約しない")
+    p.add_argument("--skip-holiday", action="store_true",
+                   help="当日が休日（土日・祝日・年末年始）なら何もせず終了する（終了コード 10）")
     args = p.parse_args(argv)
 
     tz = ZoneInfo(args.tz)
     target = args.date or datetime.now(tz).date()
+    if args.skip_holiday and not is_business_day(target):
+        name = jpholiday.is_holiday_name(target) or ("年末年始" if target.weekday() < 5 else "週末")
+        print(f"SKIP: {target} は休日（{name}）のため実行しません", file=sys.stderr)
+        return 10
     start, end = compute_window(target, tz, end_hour=args.end_hour, days_back=args.days_back)
     print(f"対象期間: {start.isoformat()} 〜 {end.isoformat()}", file=sys.stderr)
 
