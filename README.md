@@ -1,0 +1,2 @@
+# econ-digest
+Claude code
