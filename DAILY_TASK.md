@@ -64,6 +64,11 @@ git commit -m "Daily digest YYYY-MM-DD"
 git push origin main
 ```
 
+## 6. スライドを表示する
+スライドの更新と push が終わったら、Artifact ツールの `open` でスライド
+https://claude.ai/artifact/PrXTb7UgxSu6VyUphGRjeU を開き、ユーザーの画面に表示する。
+共有設定は変えない（共有はユーザーが管理する）。
+
 ## 失敗したとき
 - 期間内の記事が20件未満なら、フィードの取得状況（`econ_digest.py` の出力）を最終メッセージに書く。スライドもレポートも更新しない。
 - 最後に、スライドとレポートを更新したかどうか、記事件数、主なトピック3つを短く報告する。
